@@ -159,3 +159,12 @@ func TestProvisionURI(t *testing.T) {
 		}
 	}
 }
+
+func TestSaveLoad(t *testing.T) {
+	otpconf1 := New(10)
+	b, _ := otpconf1.Save()
+	otpconf2, _ := Load(b)
+	if len(otpconf2.ScratchCodes) != 10 {
+		t.Error("Save/Load failed.")
+	}
+}

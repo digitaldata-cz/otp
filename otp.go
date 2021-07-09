@@ -1,10 +1,12 @@
 package otp
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base32"
 	"encoding/binary"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -62,6 +64,13 @@ func New(scratchCodes int) *OTPConfig {
 	return otp
 }
 
+// Load deserializes OTP configuration
+func Load(b bytes.Buffer) (otp *OTPConfig, err error) {
+	otp = new(OTPConfig)
+	err = gob.NewDecoder(&b).Decode(&otp)
+	return otp, err
+}
+
 // NewScratchCode generates random scratch code (8 digits)
 func NewScratchCode() int {
 	var r = []rune("0123456789")
@@ -76,6 +85,12 @@ func NewScratchCode() int {
 	}
 	c, _ := strconv.Atoi(string(b))
 	return c
+}
+
+// Save serializes OTP configuration
+func (otp *OTPConfig) Save() (b bytes.Buffer, err error) {
+	err = gob.NewEncoder(&b).Encode(*otp)
+	return b, err
 }
 
 // Authenticate a one-time-password against the given OTPConfig
