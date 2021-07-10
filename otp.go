@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"sort"
 	"strconv"
 	"time"
 )
@@ -89,6 +88,7 @@ func NewScratchCode() int {
 
 // Save serializes OTP configuration
 func (otp *OTPConfig) Save() (b bytes.Buffer, err error) {
+	otp.GC()
 	err = gob.NewEncoder(&b).Encode(*otp)
 	return b, err
 }
@@ -118,14 +118,7 @@ func (otp *OTPConfig) Authenticate(password string) (bool, error) {
 					}
 				}
 				otp.UsedCodes = append(otp.UsedCodes, t)
-
-				// remove outdated "UsedCodes"
-				sort.Ints(otp.UsedCodes)
-				min := 0
-				for otp.UsedCodes[min] < minT {
-					min++
-				}
-				otp.UsedCodes = otp.UsedCodes[min:]
+				otp.GC()
 				// code OK
 				return true, nil
 			}
@@ -145,6 +138,19 @@ func (otp *OTPConfig) Authenticate(password string) (bool, error) {
 	default:
 		return false, ErrInvalidCode
 	}
+}
+
+// GC (Garbage collect) - remove old UsedCodes
+func (otp *OTPConfig) GC() {
+	t0 := int(time.Now().UTC().Unix() / 30)
+	minT := t0 - (otp.WindowSize / 2)
+	b := make([]int, 0)
+	for i := range otp.UsedCodes {
+		if otp.UsedCodes[i] >= minT {
+			b = append(b, otp.UsedCodes[i])
+		}
+	}
+	otp.UsedCodes = b
 }
 
 // ProvisionURI generates a URI that can be turned into a QR code
