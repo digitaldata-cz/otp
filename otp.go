@@ -64,8 +64,10 @@ func New(scratchCodes int) *OTPConfig {
 }
 
 // Load deserializes OTP configuration
-func Load(b bytes.Buffer) (otp *OTPConfig, err error) {
+func Load(data []byte) (otp *OTPConfig, err error) {
 	otp = new(OTPConfig)
+	var b bytes.Buffer
+	b.Write(data)
 	err = gob.NewDecoder(&b).Decode(&otp)
 	return otp, err
 }
@@ -87,10 +89,11 @@ func NewScratchCode() int {
 }
 
 // Save serializes OTP configuration
-func (otp *OTPConfig) Save() (b bytes.Buffer, err error) {
+func (otp *OTPConfig) Save() (data []byte, err error) {
 	otp.GC()
+	var b bytes.Buffer
 	err = gob.NewEncoder(&b).Encode(*otp)
-	return b, err
+	return b.Bytes(), err
 }
 
 // Authenticate a one-time-password against the given OTPConfig
