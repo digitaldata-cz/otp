@@ -66,9 +66,8 @@ func New(scratchCodes int) *OTPConfig {
 // Load deserializes OTP configuration
 func Load(data []byte) (otp *OTPConfig, err error) {
 	otp = new(OTPConfig)
-	var b bytes.Buffer
-	b.Write(data)
-	err = gob.NewDecoder(&b).Decode(&otp)
+	b := bytes.NewBuffer(data)
+	err = gob.NewDecoder(b).Decode(&otp)
 	return otp, err
 }
 
