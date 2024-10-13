@@ -3,13 +3,13 @@ package otp
 import (
 	"bytes"
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/rand"
+	"crypto/sha1" // #nosec G505
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/url"
 	"strconv"
 	"time"
@@ -49,9 +49,12 @@ func ComputeCode(secret string, challenge int64) (code string, err error) {
 }
 
 // New creates OTP authentincation instance
-func New(scratchCodes int) *OTPConfig {
+func New(scratchCodes int) (*OTPConfig, error) {
 	r := make([]byte, 10)
-	rand.Read(r)
+	_, err := rand.Read(r)
+	if err != nil {
+		return nil, err
+	}
 	otp := &OTPConfig{
 		Secret:       base32.StdEncoding.EncodeToString(r),
 		WindowSize:   5,
@@ -60,7 +63,7 @@ func New(scratchCodes int) *OTPConfig {
 	for i := 0; i < scratchCodes; i++ {
 		otp.ScratchCodes[i] = NewScratchCode()
 	}
-	return otp
+	return otp, nil
 }
 
 // Load deserializes OTP configuration
@@ -78,10 +81,10 @@ func NewScratchCode() int {
 	for i := range b {
 		// First character can not be "0"
 		if i == 0 {
-			b[i] = r[rand.Intn(9)+1]
+			b[i] = r[cryptoRandSecure(9)+1]
 			continue
 		}
-		b[i] = r[rand.Intn(10)]
+		b[i] = r[cryptoRandSecure(10)]
 	}
 	c, _ := strconv.Atoi(string(b))
 	return c
@@ -159,7 +162,7 @@ func (otp *OTPConfig) GC() {
 // to configure a Authenticator app. It respects the recommendations
 // on how to avoid conflicting accounts.
 // See https://github.com/google/google-authenticator/wiki/Conflicting-Accounts
-func (otp *OTPConfig) ProvisionURI(user string, issuer string) string {
+func (otp *OTPConfig) ProvisionURI(user, issuer string) string {
 	auth := "totp/"
 	q := make(url.Values)
 	q.Add("secret", otp.Secret)
